@@ -73,23 +73,29 @@ function distribView(period: string, months?: DPCOutputTwo[]) {
     for (let j = 0; j < finalFilter.length; j++) {
       // console.log(enrichedSaisieOne[i].dateEvalTwo);
       // console.log(finalFilter[j]);
-      const comparedData: SaisieEnrichedOne[] = enrichedSaisieOne[i].dateEvalTwo
-        ? enrichedSaisieOne[i].dateEvalTwo
-        : [{ year: 0, month: 0 }];
-      for (let k = 0; k < enrichedSaisieOne[i].dateEvalTwo.length; k++)
-        if (enrichedSaisieOne[i].dateEvalTwo?.includes(finalFilter[j])) {
+      // const comparedData: SaisieEnrichedOne[] = enrichedSaisieOne[i].dateEvalTwo
+      //   ? enrichedSaisieOne[i].dateEvalTwo
+      //   : [{ year: 0, month: 0 }];
+      for (let k = 0; k < enrichedSaisieOne[i]!.dateEvalTwo!.length; k++) {
+        // console.log(enrichedSaisieOne[i].dateEvalTwo![k]);
+        // console.log(finalFilter[j]);
+        if (
+          enrichedSaisieOne[i]!.dateEvalTwo![k].year === finalFilter[j].year &&
+          enrichedSaisieOne[i]!.dateEvalTwo![k].month === finalFilter[j].month
+        ) {
           let toBePushed = enrichedSaisieOne[i];
           // console.log(toBePushed);
           if (!fileredSaisie.includes(toBePushed)) {
             fileredSaisie.push(toBePushed);
           }
         }
+      }
     }
   }
-  // console.log(fileredSaisie.length);
+  console.log(fileredSaisie.length);
   // enrichedSaisieOne.filter((saisie) =>
   //   saisie.dateEvalTwo?.includes(1)
   // );
 }
 
-distribView("Past Month");
+distribView("Past 12 Months");
