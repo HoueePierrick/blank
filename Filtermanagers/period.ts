@@ -2,7 +2,7 @@ import Saisie from "../Interfaces/saisie";
 import { createRequire } from "module"; // Bring in the ability to create the 'require' method
 const require = createRequire(import.meta.url); // construct the require method
 const saisie: Saisie[] =
-  require("../Results/2023-3-7/full/SAISIE BRUTE-full.json")["SAISIE BRUTE"];
+  require("../Results/2023-3-8/full/SAISIE BRUTE-full.json")["SAISIE BRUTE"];
 
 // Function for the period filter
 // Input is any of these values
@@ -95,7 +95,7 @@ export default function PeriodFilter(period: string): PeriodFilterResult {
     },
     monthsArray,
   };
-  console.log(result);
+  // console.log(result);
   return result;
 }
 

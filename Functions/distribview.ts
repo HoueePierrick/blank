@@ -1,13 +1,15 @@
 import todayTomorrow from "../Helpers/tomorrow";
-import PeriodFilter from "../Filtermanagers/period";
-import Saisie from "../Interfaces/saisie";
+import PeriodFilter from "../Filtermanagers/period.js";
+import DatePeriodConverter from "../Filtermanagers/datetoperiodconvert.js";
+import Saisie, { SaisieEnrichedOne } from "../Interfaces/saisie";
 import Ponderation from "../Interfaces/ponderation";
+import { DPCOutput, DPCOutputTwo } from "../Filtermanagers/datetoperiodconvert";
 import { createRequire } from "module"; // Bring in the ability to create the 'require' method
 const require = createRequire(import.meta.url); // construct the require method
 // import saisie from "../Result/2023-1-2/first-thousand/SAISIE BRUTE-first-thousand.json" assert { type: "json" };
 // const saisie = require("../Result/2023-1-2/first-thousand/SAISIE BRUTE-first-thousand.json");
 const saisie: Saisie[] =
-  require("../Results/2023-3-7/full/SAISIE BRUTE-full.json")["SAISIE BRUTE"];
+  require("../Results/2023-3-8/full/SAISIE BRUTE-full.json")["SAISIE BRUTE"];
 
 const test = {
   Enseigne: "Giropharm",
@@ -48,4 +50,46 @@ interface distribViewOutput {
   grouping: distribViewOutputResult[];
 }
 
-function distribView(period: string, months: string[]) {}
+function distribView(period: string, months?: DPCOutputTwo[]) {
+  const enrichedSaisieOne: SaisieEnrichedOne[] = DatePeriodConverter(saisie);
+  // let enrichedMonths: DPCOutput[] = [];
+  // for(let i = 0; i < months.length; i++) {
+  //   let enrichedMonth = months[i]
+  //   enrichedMonth.share = 0;
+  //   enrichedMonths
+  // }
+  const periodFiter = PeriodFilter(period);
+  let finalFilter: DPCOutputTwo[] = [];
+  if (months) {
+    finalFilter =
+      months.length <= periodFiter.monthsArray.length
+        ? months
+        : periodFiter.monthsArray;
+  } else {
+    finalFilter = periodFiter.monthsArray;
+  }
+  let fileredSaisie: SaisieEnrichedOne[] = [];
+  for (let i = 0; i < enrichedSaisieOne.length; i++) {
+    for (let j = 0; j < finalFilter.length; j++) {
+      // console.log(enrichedSaisieOne[i].dateEvalTwo);
+      // console.log(finalFilter[j]);
+      const comparedData: SaisieEnrichedOne[] = enrichedSaisieOne[i].dateEvalTwo
+        ? enrichedSaisieOne[i].dateEvalTwo
+        : [{ year: 0, month: 0 }];
+      for (let k = 0; k < enrichedSaisieOne[i].dateEvalTwo.length; k++)
+        if (enrichedSaisieOne[i].dateEvalTwo?.includes(finalFilter[j])) {
+          let toBePushed = enrichedSaisieOne[i];
+          // console.log(toBePushed);
+          if (!fileredSaisie.includes(toBePushed)) {
+            fileredSaisie.push(toBePushed);
+          }
+        }
+    }
+  }
+  // console.log(fileredSaisie.length);
+  // enrichedSaisieOne.filter((saisie) =>
+  //   saisie.dateEvalTwo?.includes(1)
+  // );
+}
+
+distribView("Past Month");
