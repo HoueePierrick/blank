@@ -1,101 +1,130 @@
-import todayTomorrow from "../Helpers/tomorrow";
 import PeriodFilter from "../Filtermanagers/period.js";
-import DatePeriodConverter from "../Filtermanagers/datetoperiodconvert.js";
-import Saisie, { SaisieEnrichedOne } from "../Interfaces/saisie";
-import Ponderation from "../Interfaces/ponderation";
-import { DPCOutput, DPCOutputTwo } from "../Filtermanagers/datetoperiodconvert";
-import { createRequire } from "module"; // Bring in the ability to create the 'require' method
-const require = createRequire(import.meta.url); // construct the require method
-// import saisie from "../Result/2023-1-2/first-thousand/SAISIE BRUTE-first-thousand.json" assert { type: "json" };
-// const saisie = require("../Result/2023-1-2/first-thousand/SAISIE BRUTE-first-thousand.json");
-const saisie: Saisie[] =
-  require("../Results/2023-3-8/full/SAISIE BRUTE-full.json")["SAISIE BRUTE"];
+import timefilter from "../Filtermanagers/timefilter.js";
+import { SaisieEnrichedTwo } from "../Interfaces/saisie";
+import { DPCOutput, DPCOutputTwo } from "../Helpers/datetoperiodconvert";
+import enrichedSaisieTwo from "../Helpers/saisieEnricher.js";
+import previousPeriod from "../Helpers/previousPeriod.js";
 
-const test = {
-  Enseigne: "Giropharm",
-  "Titre prospectus": "Offres spéciales",
-  "Date début": "2018-01-01T22:59:39.000Z",
-  "Date fin": "2018-02-27T22:59:39.000Z",
-  "Dénomination produit": "Bion 3 Défense 30 comprimés",
-  "Prix barré": "NA",
-  "Prix promo": 7.95,
-  "Claim promotionnel": "sans claim",
-  "Mécanique fidélité": "NA",
-  "Mécanisme carte de fidélité": "NA",
-  EAN: 3401377618190,
-  Catégorie: "Complém. alim. & Huiles ess.",
-  Segment: "Vitalité & Vitamines",
-  "Sous-segment": "Vitalité",
-  "Dénomination OHC_interm.": "BION 3 DEFENSE ADULTES COMPRIME 30",
-  "Libellé Fichier Prospectus":
-    "02-01-2018_28-02-2018_Giropharm_Offres spéciales",
-  "CHECK Catégorie / Segment": 0,
-  undefined: "Complém. alim. & Huiles ess.Vitalité & VitaminesVitalité",
-  check: 1,
-};
+const months = PeriodFilter("Past 12 Months").monthsArray;
 
-// console.log(saisie.length);
 interface distribViewOutputResult {
   sellerName: string;
-  offersCountNow: {
-    total: number;
-    offers: number;
-    leaflet: number;
-  };
-  offersEvolutionCount: number;
+  oldRecords: SaisieEnrichedTwo[];
+  newRecords: SaisieEnrichedTwo[];
+  oldLeaflets: string[];
+  newLeaflets: string[];
+  oldLeafletsCount: number;
+  newLeafletsCount: number;
+  oldOffersCount: number;
+  newOffersCount: number;
+  offersEvolution: number;
 }
 
-interface distribViewOutput {
-  parapharmacy: distribViewOutputResult[];
+interface finalVOR {
+  retailer: distribViewOutputResult[];
   grouping: distribViewOutputResult[];
 }
 
-function distribView(period: string, months?: DPCOutputTwo[]) {
-  const enrichedSaisieOne: SaisieEnrichedOne[] = DatePeriodConverter(saisie);
-  // let enrichedMonths: DPCOutput[] = [];
-  // for(let i = 0; i < months.length; i++) {
-  //   let enrichedMonth = months[i]
-  //   enrichedMonth.share = 0;
-  //   enrichedMonths
-  // }
-  const periodFiter = PeriodFilter(period);
-  let finalFilter: DPCOutputTwo[] = [];
-  if (months) {
-    finalFilter =
-      months.length <= periodFiter.monthsArray.length
-        ? months
-        : periodFiter.monthsArray;
-  } else {
-    finalFilter = periodFiter.monthsArray;
-  }
-  let fileredSaisie: SaisieEnrichedOne[] = [];
-  for (let i = 0; i < enrichedSaisieOne.length; i++) {
-    for (let j = 0; j < finalFilter.length; j++) {
-      // console.log(enrichedSaisieOne[i].dateEvalTwo);
-      // console.log(finalFilter[j]);
-      // const comparedData: SaisieEnrichedOne[] = enrichedSaisieOne[i].dateEvalTwo
-      //   ? enrichedSaisieOne[i].dateEvalTwo
-      //   : [{ year: 0, month: 0 }];
-      for (let k = 0; k < enrichedSaisieOne[i]!.dateEvalTwo!.length; k++) {
-        // console.log(enrichedSaisieOne[i].dateEvalTwo![k]);
-        // console.log(finalFilter[j]);
-        if (
-          enrichedSaisieOne[i]!.dateEvalTwo![k].year === finalFilter[j].year &&
-          enrichedSaisieOne[i]!.dateEvalTwo![k].month === finalFilter[j].month
-        ) {
-          let toBePushed = enrichedSaisieOne[i];
-          // console.log(toBePushed);
-          if (!fileredSaisie.includes(toBePushed)) {
-            fileredSaisie.push(toBePushed);
-          }
+function distribView(
+  enrichedSaisieTwo: SaisieEnrichedTwo[],
+  months: DPCOutputTwo[]
+) {
+  let result: finalVOR = { retailer: [], grouping: [] };
+  const timeFiltered: SaisieEnrichedTwo[] = timefilter(
+    enrichedSaisieTwo,
+    months
+  );
+  // Getting year - 1 months; should be refined
+  let oldMonths: DPCOutputTwo[] = previousPeriod("Past 12 Months", months);
+  const oldTimeFiltered = timefilter(enrichedSaisieTwo, oldMonths);
+  let iteratedOn = [oldTimeFiltered, timeFiltered];
+  for (let a = 0; a < iteratedOn.length; a++) {
+    for (let i = 0; i < iteratedOn[a].length; i++) {
+      let mainCategory: "retailer" | "grouping" = "grouping";
+      if (iteratedOn[a][i].ponderation.Typologie === "Enseigne Parapharmacie") {
+        mainCategory = "retailer";
+      } else {
+        mainCategory = "grouping";
+      }
+      let matched = -1;
+      for (let j = 0; j < result[mainCategory].length; j++) {
+        if (timeFiltered[i].Enseigne === result[mainCategory][j].sellerName) {
+          matched = j;
+        }
+      }
+      if (matched === -1) {
+        let toBePushed = {
+          sellerName: timeFiltered[i].Enseigne,
+          oldRecords: [] as SaisieEnrichedTwo[],
+          newRecords: [] as SaisieEnrichedTwo[],
+          oldLeaflets: [],
+          newLeaflets: [],
+          oldLeafletsCount: 0,
+          newLeafletsCount: 0,
+          oldOffersCount: 0,
+          newOffersCount: 0,
+          offersEvolution: 0,
+        };
+        if (a === 0) {
+          toBePushed.oldRecords.push(iteratedOn[a][i]);
+        } else if (a === 1) {
+          toBePushed.newRecords.push(iteratedOn[a][i]);
+        }
+        result[mainCategory].push(toBePushed);
+      } else {
+        if (a === 0) {
+          result[mainCategory][matched].oldRecords.push(iteratedOn[a][i]);
+        } else if (a === 1) {
+          result[mainCategory][matched].newRecords.push(iteratedOn[a][i]);
         }
       }
     }
   }
-  console.log(fileredSaisie.length);
-  // enrichedSaisieOne.filter((saisie) =>
-  //   saisie.dateEvalTwo?.includes(1)
-  // );
+  type objectKeyOne = "retailer" | "grouping";
+  type objectKeyTwo = "oldRecords" | "newRecords";
+  type objectKeyThree = "oldLeaflets" | "newLeaflets";
+  const resultKeys: objectKeyOne[] = ["retailer", "grouping"];
+  const recordTypes: objectKeyTwo[] = ["oldRecords", "newRecords"];
+  const leafletTypes: objectKeyThree[] = ["oldLeaflets", "newLeaflets"];
+  // Running through result type (retailer vs grouping)
+  for (let i = 0; i < resultKeys.length; i++) {
+    // const resultKey: "retailer" | "grouping" = resultKeys[i]
+    // Running through each retailer / grouping
+    for (let j = 0; j < result[resultKeys[i]].length; j++) {
+      const actorEdited = result[resultKeys[i][j]];
+      // result[resultKeys[i][j]] should be edited
+      // Running through record type (old vs new)
+      for (let k = 0; k < recordTypes.length; k++) {
+        // Running through records
+        for (let l = 0; l < actorEdited[recordTypes[k]].length; l++) {
+          let matchedLeaflet = 0;
+          // Running trough retailer / grouping leaflets
+          const leafletsLookedAt = actorEdited[leafletTypes[k]];
+          for (let m = 0; m < leafletsLookedAt.length; m++) {
+            if (
+              leafletsLookedAt[m] ===
+              actorEdited[recordTypes[k]][l]["Titre prospectus"]
+            ) {
+              matchedLeaflet = 1;
+            }
+          }
+          if (matchedLeaflet === 0) {
+            leafletsLookedAt.push(
+              actorEdited[recordTypes[k]][l]["Titre prospectus"]
+            );
+          }
+        }
+      }
+      actorEdited.oldLeafletsCount = actorEdited.oldLeaflets.length;
+      actorEdited.newLeafletsCount = actorEdited.newLeaflets.length;
+      actorEdited.oldOffersCount = actorEdited.oldRecords.length;
+      actorEdited.newOffersCount = actorEdited.newRecords.length;
+      actorEdited.offersEvolution =
+        actorEdited.newOffersCount - actorEdited.oldOffersCount;
+    }
+  }
+
+  return result;
 }
 
-distribView("Past 12 Months");
+distribView(enrichedSaisieTwo, months);

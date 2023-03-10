@@ -4,6 +4,12 @@ const require = createRequire(import.meta.url); // construct the require method
 const saisie: Saisie[] =
   require("../Results/2023-3-8/full/SAISIE BRUTE-full.json")["SAISIE BRUTE"];
 
+export type stringPeriod =
+  | "Past Month"
+  | "Past 3 Months"
+  | "Past 6 Months"
+  | "Past 12 Months"
+  | "Year to Date";
 // Function for the period filter
 // Input is any of these values
 const possibleInputs = [
@@ -19,7 +25,7 @@ interface PeriodFilterResult {
   monthsArray: { year: number; month: number }[];
 }
 
-export default function PeriodFilter(period: string): PeriodFilterResult {
+export default function PeriodFilter(period: stringPeriod): PeriodFilterResult {
   const allDates: Date[] = [];
   for (let i = 0; i < saisie.length; i++) {
     const toBePushed = new Date(saisie[i]["Date fin"]);
